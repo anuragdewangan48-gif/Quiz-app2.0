@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Fredoka', cursive, sans-serif;
+    --font-body: 'Nunito', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: #dbeafe;
+    color: #1e293b;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* Pink Gingham Pattern for the cute hanging sign */
+.bg-gingham-pink {
+  background-color: #ffe4e9;
+  background-image: 
+    linear-gradient(45deg, rgba(255, 182, 193, 0.45) 25%, transparent 25%, transparent 75%, rgba(255, 182, 193, 0.45) 75%, rgba(255, 182, 193, 0.45)),
+    linear-gradient(45deg, rgba(255, 182, 193, 0.45) 25%, transparent 25%, transparent 75%, rgba(255, 182, 193, 0.45) 75%, rgba(255, 182, 193, 0.45));
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+
+/* Notebook Lined Paper */
+.bg-notebook-lines {
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #e2e8f0 27px,
+    #e2e8f0 28px
+  );
+}
+
+/* Washi Tape Effect */
+.washi-tape-pink {
+  background: rgba(244, 114, 182, 0.72);
+  backdrop-filter: blur(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+.washi-tape-pink::before,
+.washi-tape-pink::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background-size: 6px 6px;
+}
+.washi-tape-pink::before {
+  left: -3px;
+  background-image: radial-gradient(circle at left, transparent 2px, rgba(244, 114, 182, 0.72) 2px);
+}
+.washi-tape-pink::after {
+  right: -3px;
+  background-image: radial-gradient(circle at right, transparent 2px, rgba(244, 114, 182, 0.72) 2px);
+}
+
+/* 3D Tactile Buttons */
+.btn-3d-blue {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+  box-shadow: 0 6px 0 #0369a1, 0 10px 15px -3px rgba(2, 132, 199, 0.3);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-3d-blue:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 0 #0369a1, 0 12px 18px -3px rgba(2, 132, 199, 0.35);
+}
+.btn-3d-blue:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #0369a1, 0 4px 6px -2px rgba(2, 132, 199, 0.2);
+}
+
+.btn-3d-pink {
+  background: linear-gradient(180deg, #f472b6 0%, #db2777 100%);
+  box-shadow: 0 6px 0 #be185d, 0 10px 15px -3px rgba(219, 39, 119, 0.3);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-3d-pink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 0 #be185d, 0 12px 18px -3px rgba(219, 39, 119, 0.35);
+}
+.btn-3d-pink:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #be185d, 0 4px 6px -2px rgba(219, 39, 119, 0.2);
+}
+
+.btn-3d-white {
+  background: #ffffff;
+  box-shadow: 0 5px 0 #cbd5e1, 0 8px 12px -2px rgba(0, 0, 0, 0.08);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-3d-white:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 #94a3b8, 0 10px 14px -2px rgba(0, 0, 0, 0.1);
+}
+.btn-3d-white:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #cbd5e1, 0 3px 5px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Floating Animations */
+@keyframes gentle-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes cloud-drift-left {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-15px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes cloud-drift-right {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(15px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-gentle-bounce {
+  animation: gentle-bounce 3s ease-in-out infinite;
+}
+
+.animate-drift-left {
+  animation: cloud-drift-left 8s ease-in-out infinite;
+}
+
+.animate-drift-right {
+  animation: cloud-drift-right 9s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Custom Scrollbar for cute notebook aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "BestieBlock",
+  "description": "An interactive, kawaii pastel friendship quiz inspired by the viral block-or-bestie challenge. Test how well your friends really know you!",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
