@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { PlayerAttempt } from '../types/quiz';
 import { calculateTierInfo } from '../utils/share';
 import { sounds } from '../utils/sound';
-import { Trophy, X, Search, Trash2, Heart, MessageSquare, RefreshCw, Database, CheckCircle2 } from 'lucide-react';
+import { isFirebaseActive } from '../services/firebase';
+import { DatabaseSettingsModal } from './DatabaseSettingsModal';
+import { Trophy, X, Search, Trash2, Heart, MessageSquare, RefreshCw, Database, Flame, Zap } from 'lucide-react';
 
 interface LeaderboardModalProps {
   creatorName: string;
@@ -23,7 +25,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   const [confirmClear, setConfirmClear] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showDbInfo, setShowDbInfo] = useState(false);
+  const [showDbSettings, setShowDbSettings] = useState(false);
+
+  const firebaseActive = isFirebaseActive();
 
   const filtered = leaderboard.filter((item) =>
     item.playerName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,10 +81,27 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                 <h3 className="font-display font-black text-slate-800 text-lg leading-tight">
                   Friend Leaderboard
                 </h3>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Sync
-                </span>
+                <button
+                  onClick={() => setShowDbSettings(true)}
+                  title="Configure Live Sync & Database"
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black cursor-pointer transition-transform active:scale-95 ${
+                    firebaseActive
+                      ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                      : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                  }`}
+                >
+                  {firebaseActive ? (
+                    <>
+                      <Flame className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                      <span>Firestore Live</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Live Sync</span>
+                    </>
+                  )}
+                </button>
               </div>
               <p className="text-[11px] font-bold text-sky-600">
                 Who knows <span className="text-pink-500 capitalize">{creatorName}</span> best?
@@ -89,6 +110,14 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowDbSettings(true)}
+              title="Database & Sync Settings"
+              className="w-8 h-8 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
+            >
+              <Database className="w-3.5 h-3.5" />
+            </button>
+
             {onRefreshLeaderboard && (
               <button
                 onClick={handleRefresh}
@@ -131,11 +160,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowDbInfo(!showDbInfo)}
-                className="text-sky-600 hover:underline flex items-center gap-0.5"
+                onClick={() => setShowDbSettings(true)}
+                className="text-sky-600 hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
               >
-                <Database className="w-3 h-3" />
-                <span>DB Info</span>
+                <Zap className="w-3 h-3 text-amber-500" />
+                <span>Sync Settings</span>
               </button>
 
               {leaderboard.length > 0 && !confirmClear && (
@@ -168,30 +197,6 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
             )}
           </div>
         </div>
-
-        {/* Database Info Drawer */}
-        {showDbInfo && (
-          <div className="p-3 mb-2 bg-gradient-to-r from-sky-50 to-pink-50 rounded-2xl border border-sky-200 text-xs animate-in fade-in">
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-display font-extrabold text-slate-800 text-[11px] flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Full-Stack Storage Active</span>
-              </span>
-              <button
-                onClick={() => setShowDbInfo(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-600 leading-tight mb-1.5">
-              Player scores and bonus thoughts are securely saved in the persistent backend store (<code>/api/results</code>) with automatic offline caching.
-            </p>
-            <div className="text-[10px] text-slate-500">
-              <strong>Firebase Option:</strong> To connect Firebase Firestore, set your free Firebase configuration in <code>.env</code>.
-            </div>
-          </div>
-        )}
 
         {/* Players List */}
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[160px]">
@@ -339,6 +344,16 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Database Settings Modal */}
+      {showDbSettings && (
+        <DatabaseSettingsModal
+          onClose={() => setShowDbSettings(false)}
+          onConfigChanged={() => {
+            if (onRefreshLeaderboard) onRefreshLeaderboard();
+          }}
+        />
+      )}
     </div>
   );
 };

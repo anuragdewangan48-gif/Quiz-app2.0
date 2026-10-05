@@ -16,6 +16,7 @@ import {
   fetchQuizConfig,
   saveQuizConfigServer,
   resetLeaderboardServer,
+  subscribeToLiveLeaderboard,
 } from './services/api';
 import { sounds } from './utils/sound';
 import { DoodleBackground } from './components/DoodleBackground';
@@ -29,6 +30,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { EditQuizModal } from './components/EditQuizModal';
 import { OwnerAuthModal } from './components/OwnerAuthModal';
+import { DatabaseSettingsModal } from './components/DatabaseSettingsModal';
 
 type AppScreen =
   | 'loading'
@@ -70,39 +72,32 @@ export default function App() {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOwnerAuthOpen, setIsOwnerAuthOpen] = useState(false);
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
 
-  // Load backend data on startup
-  const syncWithBackend = useCallback(async () => {
-    try {
-      const [latestQuiz, latestLeaderboard] = await Promise.all([
-        fetchQuizConfig(),
-        fetchLeaderboard(),
-      ]);
-      if (latestQuiz) setMyQuiz(latestQuiz);
-      if (latestLeaderboard) setLeaderboard(latestLeaderboard);
-    } catch (err) {
-      console.warn('Initial sync error, cached local data active:', err);
-    }
-  }, []);
-
+  // Initial sync & Real-Time Live Subscription
   useEffect(() => {
-    syncWithBackend();
+    // 1. Load active quiz configuration
+    fetchQuizConfig().then((latestQuiz) => {
+      if (latestQuiz) setMyQuiz(latestQuiz);
+    });
+
+    // 2. Subscribe to live leaderboard updates
+    // (Uses Firebase onSnapshot real-time listener if configured, or smart polling for Vercel Serverless)
+    const unsubscribe = subscribeToLiveLeaderboard((attempts) => {
+      if (attempts) {
+        setLeaderboard(attempts);
+      }
+    }, 4500);
+
     const timer = setTimeout(() => {
       setScreen('landing');
     }, 600);
-    return () => clearTimeout(timer);
-  }, [syncWithBackend]);
 
-  // Periodic polling when leaderboard is open to ensure live scores
-  useEffect(() => {
-    if (!isLeaderboardOpen) return;
-    const interval = setInterval(() => {
-      fetchLeaderboard().then((data) => {
-        if (data) setLeaderboard(data);
-      });
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [isLeaderboardOpen]);
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, []);
 
   // Handlers
   const handleStartQuiz = () => {
@@ -128,7 +123,7 @@ export default function App() {
     setScreen('bonus');
   };
 
-  // Finalize attempt (with or without bonus) and save to backend
+  // Finalize attempt (with or without bonus) and save to backend / Firebase
   const handleFinalizeAttempt = async (bonusThoughts?: string, bonusTags?: string[]) => {
     let score = 0;
     myQuiz.questions.forEach((q) => {
@@ -144,7 +139,7 @@ export default function App() {
     setScreen('loading');
 
     try {
-      // Save result securely to backend database & local cache
+      // Save result securely to Firestore / Vercel API & local cache
       const saved = await submitQuizResult({
         playerName: playerName || 'Anonymous Bestie',
         score,
@@ -160,7 +155,7 @@ export default function App() {
       const updatedList = await fetchLeaderboard();
       setLeaderboard(updatedList);
     } catch (err) {
-      console.error('Failed to submit result to backend:', err);
+      console.error('Failed to submit result:', err);
     } finally {
       setTimeout(() => {
         setScreen('results');
@@ -210,6 +205,7 @@ export default function App() {
             onStartQuiz={handleStartQuiz}
             onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
             onOpenEditQuiz={() => setIsEditModalOpen(true)}
+            onOpenDbSettings={() => setIsDbModalOpen(true)}
             leaderboardCount={leaderboard.length}
             isOwner={isOwner}
             onRequestOwnerAccess={() => setIsOwnerAuthOpen(true)}
@@ -280,7 +276,16 @@ export default function App() {
           onClose={() => setIsOwnerAuthOpen(false)}
         />
       )}
+
+      {/* Database & Real-Time Sync Modal */}
+      {isDbModalOpen && (
+        <DatabaseSettingsModal
+          onClose={() => setIsDbModalOpen(false)}
+          onConfigChanged={() => {
+            fetchLeaderboard().then((data) => setLeaderboard(data));
+          }}
+        />
+      )}
     </DoodleBackground>
   );
 }
-

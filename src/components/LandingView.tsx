@@ -9,6 +9,7 @@ interface LandingViewProps {
   onStartQuiz: () => void;
   onOpenLeaderboard: () => void;
   onOpenEditQuiz: () => void;
+  onOpenDbSettings?: () => void;
   leaderboardCount: number;
   isOwner: boolean;
   onRequestOwnerAccess: () => void;
@@ -19,6 +20,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   onStartQuiz,
   onOpenLeaderboard,
   onOpenEditQuiz,
+  onOpenDbSettings,
   leaderboardCount,
   isOwner,
   onRequestOwnerAccess,
@@ -169,27 +171,58 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
         {/* Edit Questions & Options (ONLY visible to Anurag/Owner!) */}
         {isOwner ? (
-          <button
-            onClick={() => {
-              sounds.playPop();
-              onOpenEditQuiz();
-            }}
-            className="w-full h-11 rounded-2xl bg-white hover:bg-sky-50 border border-sky-200 text-sky-700 font-display text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-sky-500" />
-            <span>Edit Questions, Options &amp; Real Answers</span>
-          </button>
+          <div className="space-y-1.5 w-full">
+            <button
+              onClick={() => {
+                sounds.playPop();
+                onOpenEditQuiz();
+              }}
+              className="w-full h-11 rounded-2xl bg-white hover:bg-sky-50 border border-sky-200 text-sky-700 font-display text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-sky-500" />
+              <span>Edit Questions, Options &amp; Real Answers</span>
+            </button>
+
+            {onOpenDbSettings && (
+              <div className="text-center pt-1">
+                <button
+                  onClick={() => {
+                    sounds.playPop();
+                    onOpenDbSettings();
+                  }}
+                  className="text-[11px] font-bold text-sky-600 hover:text-sky-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <span>⚡ Live Sync &amp; Database Settings</span>
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="pt-2 text-center">
+          <div className="pt-2 flex items-center justify-center gap-3 text-center">
             <button
               onClick={() => {
                 sounds.playPop();
                 onRequestOwnerAccess();
               }}
-              className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+              className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
             >
               🔒 Owner Settings (Anurag only)
             </button>
+
+            {onOpenDbSettings && (
+              <>
+                <span className="text-slate-300">•</span>
+                <button
+                  onClick={() => {
+                    sounds.playPop();
+                    onOpenDbSettings();
+                  }}
+                  className="text-[11px] font-bold text-slate-400 hover:text-sky-600 transition-colors cursor-pointer"
+                >
+                  ⚡ Live Sync
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
