@@ -3,17 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QuizData, PlayerAttempt, SupportedLanguage } from './types/quiz';
 import {
   getMyQuiz,
-  saveMyQuiz,
-  savePlayerAttempt,
-  getGlobalLeaderboard,
-  clearGlobalLeaderboard,
   checkIsOwner,
   setOwnerAuth,
 } from './utils/share';
+import {
+  fetchLeaderboard,
+  submitQuizResult,
+  fetchQuizConfig,
+  saveQuizConfigServer,
+  resetLeaderboardServer,
+} from './services/api';
 import { sounds } from './utils/sound';
 import { DoodleBackground } from './components/DoodleBackground';
 import { Header } from './components/Header';
@@ -49,7 +52,7 @@ export default function App() {
   const [latestAttempt, setLatestAttempt] = useState<PlayerAttempt | null>(null);
 
   // Global leaderboard of friends who tested
-  const [leaderboard, setLeaderboard] = useState<PlayerAttempt[]>(() => getGlobalLeaderboard());
+  const [leaderboard, setLeaderboard] = useState<PlayerAttempt[]>([]);
 
   // Owner mode state (only Anurag can edit)
   const [isOwner, setIsOwner] = useState<boolean>(() => {
@@ -68,12 +71,38 @@ export default function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOwnerAuthOpen, setIsOwnerAuthOpen] = useState(false);
 
+  // Load backend data on startup
+  const syncWithBackend = useCallback(async () => {
+    try {
+      const [latestQuiz, latestLeaderboard] = await Promise.all([
+        fetchQuizConfig(),
+        fetchLeaderboard(),
+      ]);
+      if (latestQuiz) setMyQuiz(latestQuiz);
+      if (latestLeaderboard) setLeaderboard(latestLeaderboard);
+    } catch (err) {
+      console.warn('Initial sync error, cached local data active:', err);
+    }
+  }, []);
+
   useEffect(() => {
+    syncWithBackend();
     const timer = setTimeout(() => {
       setScreen('landing');
     }, 600);
     return () => clearTimeout(timer);
-  }, []);
+  }, [syncWithBackend]);
+
+  // Periodic polling when leaderboard is open to ensure live scores
+  useEffect(() => {
+    if (!isLeaderboardOpen) return;
+    const interval = setInterval(() => {
+      fetchLeaderboard().then((data) => {
+        if (data) setLeaderboard(data);
+      });
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isLeaderboardOpen]);
 
   // Handlers
   const handleStartQuiz = () => {
@@ -99,8 +128,8 @@ export default function App() {
     setScreen('bonus');
   };
 
-  // Finalize attempt (with or without bonus)
-  const handleFinalizeAttempt = (bonusThoughts?: string, bonusTags?: string[]) => {
+  // Finalize attempt (with or without bonus) and save to backend
+  const handleFinalizeAttempt = async (bonusThoughts?: string, bonusTags?: string[]) => {
     let score = 0;
     myQuiz.questions.forEach((q) => {
       if (temporaryAnswers[q.id] === q.correctAnswerId) {
@@ -111,37 +140,47 @@ export default function App() {
     const total = myQuiz.questions.length;
     const percentage = Math.round((score / total) * 100);
 
-    const attempt: PlayerAttempt = {
-      id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      playerName: playerName || 'Anonymous Bestie',
-      score,
-      total,
-      percentage,
-      answers: temporaryAnswers,
-      bonusThoughts: bonusThoughts || undefined,
-      bonusTags: bonusTags && bonusTags.length > 0 ? bonusTags : undefined,
-      timestamp: Date.now(),
-    };
-
-    savePlayerAttempt(attempt);
-    setLatestAttempt(attempt);
-    setLeaderboard(getGlobalLeaderboard());
-
     setLoadingMessage(`calculating ${myQuiz.creatorName}'s verdict...`);
     setScreen('loading');
-    setTimeout(() => {
-      setScreen('results');
-    }, 600);
+
+    try {
+      // Save result securely to backend database & local cache
+      const saved = await submitQuizResult({
+        playerName: playerName || 'Anonymous Bestie',
+        score,
+        total,
+        percentage,
+        answers: temporaryAnswers,
+        bonusThoughts: bonusThoughts || undefined,
+        bonusTags: bonusTags && bonusTags.length > 0 ? bonusTags : undefined,
+      });
+
+      setLatestAttempt(saved);
+      // Refresh leaderboard list
+      const updatedList = await fetchLeaderboard();
+      setLeaderboard(updatedList);
+    } catch (err) {
+      console.error('Failed to submit result to backend:', err);
+    } finally {
+      setTimeout(() => {
+        setScreen('results');
+      }, 500);
+    }
   };
 
-  const handleSaveQuizEdits = (updatedQuiz: QuizData) => {
+  const handleSaveQuizEdits = async (updatedQuiz: QuizData) => {
     setMyQuiz(updatedQuiz);
-    saveMyQuiz(updatedQuiz);
+    await saveQuizConfigServer(updatedQuiz);
   };
 
-  const handleClearLeaderboard = () => {
-    clearGlobalLeaderboard();
+  const handleClearLeaderboard = async () => {
+    await resetLeaderboardServer();
     setLeaderboard([]);
+  };
+
+  const handleManualRefreshLeaderboard = async () => {
+    const updated = await fetchLeaderboard();
+    setLeaderboard(updated);
   };
 
   const handleOwnerUnlocked = () => {
@@ -220,6 +259,7 @@ export default function App() {
           creatorName={myQuiz.creatorName}
           leaderboard={leaderboard}
           onClearLeaderboard={handleClearLeaderboard}
+          onRefreshLeaderboard={handleManualRefreshLeaderboard}
           onClose={() => setIsLeaderboardOpen(false)}
         />
       )}

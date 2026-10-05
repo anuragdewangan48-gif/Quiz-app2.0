@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { PlayerAttempt } from '../types/quiz';
 import { calculateTierInfo } from '../utils/share';
 import { sounds } from '../utils/sound';
-import { Trophy, X, Search, Trash2, Heart, MessageSquare } from 'lucide-react';
+import { Trophy, X, Search, Trash2, Heart, MessageSquare, RefreshCw, Database, CheckCircle2 } from 'lucide-react';
 
 interface LeaderboardModalProps {
   creatorName: string;
   leaderboard: PlayerAttempt[];
   onClearLeaderboard: () => void;
+  onRefreshLeaderboard?: () => Promise<void>;
   onClose: () => void;
 }
 
@@ -15,11 +16,14 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   creatorName,
   leaderboard,
   onClearLeaderboard,
+  onRefreshLeaderboard,
   onClose,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showDbInfo, setShowDbInfo] = useState(false);
 
   const filtered = leaderboard.filter((item) =>
     item.playerName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -29,6 +33,17 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
     sounds.playBonk();
     onClearLeaderboard();
     setConfirmClear(false);
+  };
+
+  const handleRefresh = async () => {
+    if (!onRefreshLeaderboard || isRefreshing) return;
+    sounds.playPop();
+    setIsRefreshing(true);
+    try {
+      await onRefreshLeaderboard();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
   };
 
   const formatTime = (timestamp: number) => {
@@ -47,7 +62,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border-2 border-sky-200 max-h-[88vh] flex flex-col relative overflow-hidden">
+      <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border-2 border-sky-200 max-h-[90vh] flex flex-col relative overflow-hidden">
         {/* Pink Washi Tape decoration at top */}
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-28 h-5 washi-tape-pink shadow-xs -rotate-1 pointer-events-none" />
 
@@ -58,24 +73,42 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
               <Trophy className="w-5 h-5 fill-amber-400" />
             </div>
             <div>
-              <h3 className="font-display font-black text-slate-800 text-lg leading-tight">
-                Friend Leaderboard
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-display font-black text-slate-800 text-lg leading-tight">
+                  Friend Leaderboard
+                </h3>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Sync
+                </span>
+              </div>
               <p className="text-[11px] font-bold text-sky-600">
                 Who knows <span className="text-pink-500 capitalize">{creatorName}</span> best?
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              sounds.playPop();
-              onClose();
-            }}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 active:scale-95 transition-all cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onRefreshLeaderboard && (
+              <button
+                onClick={handleRefresh}
+                title="Refresh Live Scores"
+                className="w-8 h-8 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-600 flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-pink-500' : ''}`} />
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                sounds.playPop();
+                onClose();
+              }}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 active:scale-95 transition-all cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Search Bar & Total Counter */}
@@ -95,15 +128,27 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
             <span>
               {leaderboard.length} {leaderboard.length === 1 ? 'Friend' : 'Friends'} Tested
             </span>
-            {leaderboard.length > 0 && !confirmClear && (
+
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setConfirmClear(true)}
-                className="text-slate-400 hover:text-rose-500 flex items-center gap-1 transition-colors cursor-pointer"
+                onClick={() => setShowDbInfo(!showDbInfo)}
+                className="text-sky-600 hover:underline flex items-center gap-0.5"
               >
-                <Trash2 className="w-3 h-3" />
-                <span>Reset</span>
+                <Database className="w-3 h-3" />
+                <span>DB Info</span>
               </button>
-            )}
+
+              {leaderboard.length > 0 && !confirmClear && (
+                <button
+                  onClick={() => setConfirmClear(true)}
+                  className="text-slate-400 hover:text-rose-500 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Reset</span>
+                </button>
+              )}
+            </div>
+
             {confirmClear && (
               <div className="flex items-center gap-1.5 text-rose-600">
                 <span>Clear all?</span>
@@ -124,6 +169,30 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
           </div>
         </div>
 
+        {/* Database Info Drawer */}
+        {showDbInfo && (
+          <div className="p-3 mb-2 bg-gradient-to-r from-sky-50 to-pink-50 rounded-2xl border border-sky-200 text-xs animate-in fade-in">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-display font-extrabold text-slate-800 text-[11px] flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Full-Stack Storage Active</span>
+              </span>
+              <button
+                onClick={() => setShowDbInfo(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-600 leading-tight mb-1.5">
+              Player scores and bonus thoughts are securely saved in the persistent backend store (<code>/api/results</code>) with automatic offline caching.
+            </p>
+            <div className="text-[10px] text-slate-500">
+              <strong>Firebase Option:</strong> To connect Firebase Firestore, set your free Firebase configuration in <code>.env</code>.
+            </div>
+          </div>
+        )}
+
         {/* Players List */}
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[160px]">
           {filtered.length === 0 ? (
@@ -143,7 +212,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
               const isTop3 = rank <= 3;
               const rankBadges = ['🥇', '🥈', '🥉'];
               const isExpanded = expandedId === item.id;
-              const hasBonus = (item.bonusThoughts && item.bonusThoughts.trim().length > 0) || (item.bonusTags && item.bonusTags.length > 0);
+              const hasBonus =
+                (item.bonusThoughts && item.bonusThoughts.trim().length > 0) ||
+                (item.bonusTags && item.bonusTags.length > 0);
 
               return (
                 <div
@@ -271,3 +342,4 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
     </div>
   );
 };
+
